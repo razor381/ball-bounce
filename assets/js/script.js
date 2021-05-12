@@ -1,14 +1,18 @@
-const KNOTS = 20;
+const KNOTS = 5;
+const ANT_RADIUS = 40;
 const DEFAULT_MIN_RADIUS = 10;
 const DEFAULT_RADIUS = 50;
-const DEFAULT_SHAPES_QTY = 40;
+const DEFAULT_SHAPES_QTY = 4;
 const DEFAULT_COLOR = 'rgba(255, 255, 255, 0.5)';
 const COLORS = ['#46B39D', '#F0CA4D', '#E37B40', '#DE5B49'];
 
 const canvas = document.querySelector('canvas');
+const ballBtn = document.querySelector('.ball-btn');
+const antBtn = document.querySelector('.ant-btn');
 
 // ---------------- classes ------------------------
 
+// class Shape
 function Shape(x, y, color) {
   this.x = x;
   this.y = y;
@@ -17,7 +21,15 @@ function Shape(x, y, color) {
   this.color = color;
 }
 
-Shape.prototype.setColor = (color) => this.color = color;
+Shape.prototype.setColor = function (color) {
+  this.color = color;
+}
+
+Shape.prototype.showClickResponse = function () {
+  const color = this.color;
+  this.setColor('white');
+  setTimeout(() => this.setColor(color), 20);
+}
 
 Shape.prototype.move = function(xDistance = 1, yDistance = 1) {
   if (this.x - this.radius <= 0) {
@@ -40,15 +52,35 @@ Shape.prototype.move = function(xDistance = 1, yDistance = 1) {
   this.y += this.dy * yDistance;
 }
 
+
+// class circle
 function Circle(x, y, radius, color) {
   Shape.call(this, x, y, color);
   this.radius = radius;
 }
 
+// delegation Shape -> Circle
 Circle.prototype = Object.create(Shape.prototype);
 Circle.prototype.constructor = Circle;
 
 Circle.prototype.draw = function(ctx) {
+  ctx.beginPath();
+  ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+  ctx.fillStyle = this.color;
+  ctx.fill();
+}
+
+// class Ant
+function Ant(x, y, radius, color) {
+  Shape.call(this, x, y, color);
+  this.radius = radius;
+}
+
+// delegation Shape -> Ant
+Ant.prototype = Object.create(Shape.prototype);
+Ant.prototype.constructor = Ant;
+
+Ant.prototype.draw = function(ctx) {
   ctx.beginPath();
   ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
   ctx.fillStyle = this.color;
@@ -105,11 +137,11 @@ function getRandomBetween(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-function generateRandomShapes() {
-  const shapes = [];
+function generateRandomCircles() {
+  const circles = [];
 
   for(let i = 0; i <DEFAULT_SHAPES_QTY; i++ ) {
-    shapes.push(new Circle(
+    circles.push(new Circle(
       getRandomBetween(DEFAULT_RADIUS, canvas.width - DEFAULT_RADIUS),
       getRandomBetween(DEFAULT_RADIUS, canvas.height - DEFAULT_RADIUS),
       getRandomBetween(DEFAULT_MIN_RADIUS, DEFAULT_RADIUS),
@@ -117,7 +149,22 @@ function generateRandomShapes() {
     ));
   }
 
-  return shapes;
+  return circles;
+}
+
+function generateRandomAnts() {
+  const ants = [];
+
+  for(let i = 0; i <DEFAULT_SHAPES_QTY; i++ ) {
+    ants.push(new Ant(
+      getRandomBetween(DEFAULT_RADIUS, canvas.width - DEFAULT_RADIUS),
+      getRandomBetween(DEFAULT_RADIUS, canvas.height - DEFAULT_RADIUS),
+      ANT_RADIUS,
+      COLORS[3],
+    ));
+  }
+
+  return ants;
 }
 
 function drawShapes(ctx, shapes) {
@@ -129,6 +176,23 @@ function moveShapes(shapes) {
   checkShapesCollision(shapes);
 }
 
+function checkShapesClicked(e, shapes) {
+  shapes.forEach((shape, i) => {
+    const mousePos = {
+      x: e.clientX,
+      y: e.clientY,
+    };
+    const displacement = getDistanceBetween(mousePos, shape);
+    if (displacement < shape.radius) {
+      shape.showClickResponse();
+      shapes.splice(i, 1);
+    }
+  });
+}
+
+
+// ---------------- logic ---------------
+
 
 if (canvas) {
   const ctx = canvas.getContext('2d');
@@ -136,9 +200,22 @@ if (canvas) {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  const shapes = generateRandomShapes();
+  if (antBtn && ballBtn) {
+    ballBtn.addEventListener('click', () => {
+      const circles = generateRandomCircles();
+      animateShapes(ctx, circles);
+    });
 
-  animateShapes(ctx, shapes);
+    antBtn.addEventListener('click', () => {
+      const ants = generateRandomAnts();
+      animateShapes(ctx, ants);
+
+
+      canvas.addEventListener('click', (e) => {
+        checkShapesClicked(e, ants);
+      })
+    });
+  }
 }
 
 
