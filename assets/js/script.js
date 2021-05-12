@@ -5,6 +5,7 @@ const DEFAULT_RADIUS = 50;
 const DEFAULT_SHAPES_QTY = 4;
 const DEFAULT_COLOR = 'rgba(255, 255, 255, 0.5)';
 const COLORS = ['#46B39D', '#F0CA4D', '#E37B40', '#DE5B49'];
+const ANT_IMAGE_SRC = '../assets/img/ant.png';
 
 const canvas = document.querySelector('canvas');
 const ballBtn = document.querySelector('.ball-btn');
@@ -53,7 +54,7 @@ Shape.prototype.move = function(xDistance = 1, yDistance = 1) {
 }
 
 
-// class circle
+// class Circle
 function Circle(x, y, radius, color) {
   Shape.call(this, x, y, color);
   this.radius = radius;
@@ -74,22 +75,33 @@ Circle.prototype.draw = function(ctx) {
 function Ant(x, y, radius, color) {
   Shape.call(this, x, y, color);
   this.radius = radius;
+  this.image = loadImage(ANT_IMAGE_SRC);
 }
 
 // delegation Shape -> Ant
 Ant.prototype = Object.create(Shape.prototype);
 Ant.prototype.constructor = Ant;
 
-Ant.prototype.draw = function(ctx) {
-  ctx.beginPath();
-  ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-  ctx.fillStyle = this.color;
-  ctx.fill();
+Ant.prototype.draw = async function(ctx) {
+  ctx.drawImage(
+    await this.image,
+    this.x,
+    this.y,
+    this.radius,
+    this.radius,
+  );
 }
 
 
 // ----------------- functions ------------------------
 
+function loadImage(src) {
+  return new Promise(resolve => {
+    let img = new Image();
+    img.onload = (() => resolve(img));
+    img.src = src;
+  });
+}
 
 function animateShapes(ctx, shapes) {
   function animate() {
@@ -209,7 +221,6 @@ if (canvas) {
     antBtn.addEventListener('click', () => {
       const ants = generateRandomAnts();
       animateShapes(ctx, ants);
-
 
       canvas.addEventListener('click', (e) => {
         checkShapesClicked(e, ants);
