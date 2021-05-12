@@ -1,9 +1,14 @@
-const KNOTS = 5;
-const ANT_RADIUS = 40;
-const DEFAULT_MIN_RADIUS = 10;
-const DEFAULT_RADIUS = 50;
-const DEFAULT_SHAPES_QTY = 4;
+const KNOTS = 30;
+
+const ANT_RADIUS = 80;
+const DEFAULT_ANTS_QTY = 20;
+
+const DEFAULT_MIN_RADIUS = 5;
+const DEFAULT_RADIUS = 30;
+const DEFAULT_SHAPES_QTY = 100;
 const DEFAULT_COLOR = 'rgba(255, 255, 255, 0.5)';
+const WHITE_COLOR = 'white';
+
 const COLORS = ['#46B39D', '#F0CA4D', '#E37B40', '#DE5B49'];
 const ANT_IMAGE_SRC = '../assets/img/ant.png';
 
@@ -11,25 +16,50 @@ const canvas = document.querySelector('canvas');
 const ballBtn = document.querySelector('.ball-btn');
 const antBtn = document.querySelector('.ant-btn');
 
-// ---------------- classes ------------------------
 
-// class Shape
-function Shape(x, y, color) {
+// --------------------- classes ----------------------
+
+
+/*
+*
+*  Class Shape:
+*    @params:
+*      x: Number
+*      y: Number
+*      color: String
+*
+*    @props:
+*      x: Number
+*      y: Number
+*      dx: Number
+*      dy: Number
+*      color: String
+*      baseColor: String
+*
+*    @methods:
+*      setColor: change color of shape
+*      showClickResponse: flicker color of shape
+*      move: update position of shape
+*
+*/
+function Shape(x, y, color='black') {
   this.x = x;
   this.y = y;
   this.dx = (Math.random() - 0.5) * KNOTS;
   this.dy = (Math.random() - 0.5) * KNOTS;
   this.color = color;
+  this.baseColor = color;
 }
 
 Shape.prototype.setColor = function (color) {
   this.color = color;
-}
+};
 
-Shape.prototype.showClickResponse = function () {
-  const color = this.color;
-  this.setColor('white');
-  setTimeout(() => this.setColor(color), 20);
+Shape.prototype.flash = function () {
+  this.setColor(WHITE_COLOR);
+  setTimeout(() => {
+    this.setColor(this.baseColor)
+  }, 50);
 }
 
 Shape.prototype.move = function(xDistance = 1, yDistance = 1) {
@@ -54,7 +84,22 @@ Shape.prototype.move = function(xDistance = 1, yDistance = 1) {
 }
 
 
-// class Circle
+/*
+*
+*  Class Circle:
+*    @params:
+*      x: Number
+*      y: Number
+*      radius: Number
+*      color: String
+*
+*    @props:
+*      radius: Number
+*
+*    @methods:
+*      draw: render element inside canvas
+*
+*/
 function Circle(x, y, radius, color) {
   Shape.call(this, x, y, color);
   this.radius = radius;
@@ -71,7 +116,23 @@ Circle.prototype.draw = function(ctx) {
   ctx.fill();
 }
 
-// class Ant
+/*
+*
+*  Class Ant:
+*    @params:
+*      x: Number
+*      y: Number
+*      radius: Number
+*      color: String
+*
+*    @props:
+*      radius: Number
+*      image: hold image load promise
+*
+*    @methods:
+*      draw: render element inside canvas
+*
+*/
 function Ant(x, y, radius, color) {
   Shape.call(this, x, y, color);
   this.radius = radius;
@@ -83,17 +144,29 @@ Ant.prototype = Object.create(Shape.prototype);
 Ant.prototype.constructor = Ant;
 
 Ant.prototype.draw = async function(ctx) {
+  const image = await this.image;
+  const rotationAngle = getRotationAngle(this.dx, this.dy);
+
+  ctx.save();
+  ctx.translate(this.x, this.y);
+  ctx.rotate(rotationAngle);
+  ctx.translate(-this.x, -this.y);
   ctx.drawImage(
-    await this.image,
+    image,
     this.x,
     this.y,
     this.radius,
     this.radius,
   );
+  ctx.restore();
 }
 
 
 // ----------------- functions ------------------------
+
+function getRotationAngle(dx, dy) {
+  return Math.atan2(dy, dx) * 180 / Math.PI;
+}
 
 function loadImage(src) {
   return new Promise(resolve => {
@@ -127,7 +200,11 @@ function isColliding(shape1, shape2) {
 }
 
 function handleCollision(shape1, shape2) {
+
   [shape1.dx, shape1.dy, shape2.dx, shape2.dy] = [shape2.dx, shape2.dy, shape1.dx, shape1.dy];
+
+  shape1.flash();
+  shape2.flash();
 
   shape1.move();
   shape2.move();
@@ -167,12 +244,11 @@ function generateRandomCircles() {
 function generateRandomAnts() {
   const ants = [];
 
-  for(let i = 0; i <DEFAULT_SHAPES_QTY; i++ ) {
+  for(let i = 0; i <DEFAULT_ANTS_QTY; i++ ) {
     ants.push(new Ant(
-      getRandomBetween(DEFAULT_RADIUS, canvas.width - DEFAULT_RADIUS),
-      getRandomBetween(DEFAULT_RADIUS, canvas.height - DEFAULT_RADIUS),
+      getRandomBetween(ANT_RADIUS, canvas.width - ANT_RADIUS),
+      getRandomBetween(ANT_RADIUS, canvas.height - ANT_RADIUS),
       ANT_RADIUS,
-      COLORS[3],
     ));
   }
 
@@ -196,7 +272,7 @@ function checkShapesClicked(e, shapes) {
     };
     const displacement = getDistanceBetween(mousePos, shape);
     if (displacement < shape.radius) {
-      shape.showClickResponse();
+      shape.flash();
       shapes.splice(i, 1);
     }
   });
